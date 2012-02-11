@@ -1,0 +1,150 @@
+This is myftp 0.2.0
+
+Author     : c9811014 - Vikas. Desai 
+
+Contents   :
+	This package contains the myftp client and server a subset of the ftp
+ protocol.
+
+Compiling  :
+		a makefile is included in the package. just running make builds 	both the 'server' and the 'client' for MYFTP.
+
+		just the "server" could be built by running make server.
+
+		just the "client" could be built by running make client.
+
+Running    :
+		The server accepts a single optional commandline parameter which 	is the port number to which the server will listen for client connection	. If the parameter is not specified the server listens on a 
+	DEFAULT PORT 21000.
+	e.g. 
+		./server 12345  #server will listen on port 12345
+		./server 	#server will listen on port 21000
+
+		The myftp client command prompt looks like "myftp>"
+		The client accepts two optional commandline parameters which are
+	the server ip/name and the port number. both the parameters are optional
+	. If only the server ip/name is specified the client will try to connect
+	to a ftp server on that ip/name on port 21000. If no commandline 
+	parameters are given the client goes to a myftp prompt from where a 
+	connection could be made to a server using the "open" command.
+
+		Typing "help" on the myftp prompt gives a simple help output.
+
+Description:
+	The protocol implemented in myftp is based on RFC 959.
+	The following diagram shows the structure of ftp as implemented in
+ myftp. 
+                                            -------------
+                                            |/---------\|
+                                            ||   User  ||    --------
+                                            ||Interface|<--->| User |
+                                            |\----^----/|    --------
+                  ----------                |     |     |
+                  |/------\|  FTP Commands  |/----V----\|
+                  ||Server|<---------------->|   User  ||
+                  ||  PI  ||   FTP Replies  ||    PI   ||
+                  |\--^---/|                |\----^----/|
+                  |   |    |                |     |     |
+      --------    |/--V---\|      Data      |/----V----\|    --------
+      | File |<--->|Server|<---------------->|  User   |<--->| File |
+      |System|    || DTP  ||   Connection   ||   DTP   ||    |System|
+      --------    |\------/|                |\---------/|    --------
+                  ----------                -------------
+
+                  Server-FTP                   USER-FTP
+
+				FTP Structure
+				=============
+
+	The explanation that follows is with respect to this diagram.
+	The files contained in this package and their descriptions and
+ functionality are as follows:
+
+	The package is in tar.gz format in file myftp.tar.gz.
+
+ README : This file.
+
+ CLIENT CODE
+ -----------
+ ui.c   : This file implements the User Interface for the client.
+		It shows the prompt to the user and validates the user input.
+	It then calls the functions from the file pi.c which is explained later.
+	This file defines an array 'avail_comm' of structures 'command_tag'
+	which holds all the commands supported by myftp client. this file also
+	contains functions required for parsing and manipulating the responses
+	and return codes of the server.
+
+ ui.h   : The include file for ui.c
+		defines values for constants used for commands.
+
+ pi.c   : This file implements the Protocol Interface for the client.
+		This file contains functions which implement the CLIENT side of
+	the FTP protocol.  This functions are called from ui.c. each command is 
+	normally mapped to a function which takes care of sending the command 
+	and receiving and decoding/parsing the server response. The funtions 
+	return a value to the ui.c funtions stating success or failure. 
+	A global variable 'status' is defined which maintains the current state 
+	of the ftp client with respect to the server.
+
+ pi.h   : The include file for pi.c
+		defines the various status of the client.
+
+ SERVER CODE
+ -----------
+
+ server.c : This file implements the Protocol Interface for the server.
+		This file contains functions which implement the SERVER side of 
+	the FTP protocol. The function run_ftp() creates a listening socket 
+	which waits for client connections. after accepting a connection it 
+	forks and the control is passed to the command_loop() function which
+	reads the clients requests and sends responses and data as required.
+	A global variable 'status' maintains the status of the server.
+		User validation is done by the server by comparing the username
+	and password sent by the client with the data in the "passwd" file. The
+	passwd file must be in the same directory as the server. The fields in
+	the passwd file are similar to the fields in the /etc/passwd file except
+	that the password field is not encrypted.
+
+ server.h : The include file for server.c
+		defines the server states and commands.
+
+ COMMON CODE
+ -----------
+
+ comm.c   : This file contains the common SOCKET code used by both server and 
+	client of myftp.
+		This file mainly contains the calls to socket api.
+
+	Function accept_connection() accepts connection.
+
+	Function create_listen_socket() creates a socket bind it to a specific
+	port and interface if specified and sets the SO_REUSEADDR option for the
+	socket and then calls listen on the socket.
+
+	Function get_data() calls read_write_data() to get data from the 
+	connection.
+
+	Function put_data() calls read_write_data() to send data thru the
+	connection.
+
+	Function get_data_connection_info() converts data received with PORT 
+	command to ip address and port number.
+
+	Function get_port_info() returns the port info in a string format to
+	be sent with the PORT command.
+
+	Function get_reply() reads a response from the connection.
+
+	Function open_sock_connection() calls connect for given server and port
+	and populates a connection structure with the information.
+
+	Function read_write_data() called by get_data() and put_data() reads 
+	data from one file descriptor and write it to another one till EOF is 
+	encountered on the first.
+
+	Function send_request()  sends a request string over a connection.
+
+ makefile : make rules for the myftp server and client.
+
+ passwd   : file to hold passwords. Just the first two fields are important. But
+	they should be ":" seperated.
